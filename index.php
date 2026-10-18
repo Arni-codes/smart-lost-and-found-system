@@ -33,8 +33,22 @@ try {
 
     // Reunited / Claimed items
     $stats['claimed'] = (int)$pdo->query("SELECT COUNT(*) FROM items WHERE status = 'claimed'")->fetchColumn();
+
+    // Query 3 recent open items for homepage showcase
+    $recentItemsStmt = $pdo->query(
+        "SELECT i.id, i.item_type, i.title, i.description, i.incident_date, i.custody_status, i.image_path,
+                c.name AS category_name, l.building, l.specific_area
+         FROM items i
+         JOIN categories c ON i.category_id = c.id
+         JOIN locations l ON i.location_id = l.id
+         WHERE i.status = 'open'
+         ORDER BY i.created_at DESC
+         LIMIT 3"
+    );
+    $recentItems = $recentItemsStmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     // Database connection or table not yet ready; fallback to default 0 counts
+    $recentItems = [];
 }
 
 require_once __DIR__ . '/includes/header.php';
@@ -45,7 +59,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="hero-content">
             <div class="hero-pill">
-                <span class="badge badge-primary">Campus Recovery Portal &bull; Foundation Ready</span>
+                <span class="badge badge-primary">Campus Recovery Portal &bull; Active &amp; Verified</span>
             </div>
             <h1 class="hero-title">
                 Reuniting Students with Belongings through <span class="highlight">Smart Matching</span>
@@ -54,6 +68,18 @@ require_once __DIR__ . '/includes/header.php';
                 A centralized, transparent, and secure platform for our college campus. 
                 Report missing items, track found belongings, verify ownership safely, and claim items at the Security Desk.
             </p>
+
+            <!-- Hero Live Search Form -->
+            <form action="<?= url('items.php') ?>" method="GET" style="max-width: 580px; margin: 0 auto var(--space-6) auto;">
+                <div class="search-input-wrap" style="box-shadow: var(--shadow-md); border-radius: var(--radius-md);">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" name="search" placeholder="Search by keyword, e.g. 'Dell laptop', 'blue bottle', 'student ID'..." aria-label="Search campus lost and found catalog">
+                </div>
+            </form>
+
             <div class="hero-actions">
                 <a href="<?= url('items.php') ?>" class="btn btn-primary btn-lg">Browse Campus Items</a>
                 <a href="<?= url('report-lost.php') ?>" class="btn btn-secondary btn-lg">Report Lost Item</a>
@@ -84,6 +110,104 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="stat-label">Reunited with Owners</div>
             </div>
         </div>
+    </div>
+</section>
+
+<!-- Recently Reported Items Section -->
+<section class="section" style="padding-top: var(--space-12); padding-bottom: var(--space-8);">
+    <div class="container">
+        <div style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: var(--space-8); flex-wrap: wrap; gap: var(--space-4);">
+            <div>
+                <span class="badge badge-primary" style="margin-bottom: var(--space-2);">Campus Feed</span>
+                <h2 class="section-title" style="text-align: left; margin-bottom: 0;">Recently Reported Belongings</h2>
+                <p class="section-subtitle" style="text-align: left; margin-top: var(--space-1);">
+                    Latest active items reported lost or found across college buildings.
+                </p>
+            </div>
+            <a href="<?= url('items.php') ?>" class="btn btn-secondary">
+                View All Items &rarr;
+            </a>
+        </div>
+
+        <?php if (!empty($recentItems)): ?>
+            <div class="items-grid">
+                <?php foreach ($recentItems as $item): ?>
+                    <article class="item-card">
+                        <div class="item-card-media">
+                            <div class="item-card-badges">
+                                <span class="badge badge-<?= $item['item_type'] === 'lost' ? 'lost' : 'found' ?>">
+                                    <?= ucfirst(e($item['item_type'])) ?>
+                                </span>
+                                <?php if ($item['item_type'] === 'found'): ?>
+                                    <?php if ($item['custody_status'] === 'submitted_to_security'): ?>
+                                        <span class="badge badge-custody-security">At Security Desk</span>
+                                    <?php elseif ($item['custody_status'] === 'with_finder'): ?>
+                                        <span class="badge badge-custody-finder">With Finder</span>
+                                    <?php elseif ($item['custody_status'] === 'returned_to_owner'): ?>
+                                        <span class="badge badge-custody-returned">Returned</span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                            <img src="<?= !empty($item['image_path']) ? url('uploads/items/' . e($item['image_path'])) : url('assets/images/default-item.svg') ?>" 
+                                 alt="<?= e($item['title']) ?>" 
+                                 loading="lazy">
+                        </div>
+                        <div class="item-card-body">
+                            <div class="item-card-meta-top">
+                                <span class="badge badge-secondary" style="font-size: 0.6875rem;">
+                                    <?= e($item['category_name']) ?>
+                                </span>
+                                <span>&bull;</span>
+                                <time datetime="<?= e($item['incident_date']) ?>"><?= format_date($item['incident_date']) ?></time>
+                            </div>
+                            <h3 class="item-card-title">
+                                <a href="<?= url('item-details.php?id=' . $item['id']) ?>">
+                                    <?= e($item['title']) ?>
+                                </a>
+                            </h3>
+                            <p class="item-card-desc">
+                                <?= e(mb_strimwidth($item['description'], 0, 100, '...')) ?>
+                            </p>
+                            <div class="item-card-meta-list">
+                                <div class="item-card-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                        <circle cx="12" cy="10" r="3"></circle>
+                                    </svg>
+                                    <span><?= e($item['building']) ?><?= !empty($item['specific_area']) ? ' (' . e($item['specific_area']) . ')' : '' ?></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="item-card-footer">
+                            <span style="font-size: 0.8125rem; color: var(--color-text-muted);">
+                                Status: <strong>Open</strong>
+                            </span>
+                            <a href="<?= url('item-details.php?id=' . $item['id']) ?>" class="btn btn-outline btn-sm">
+                                View Details
+                            </a>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h3 class="empty-state-title">No Active Items Reported Yet</h3>
+                <p class="empty-state-desc">
+                    When students report lost belongings or turn in found items, they will appear here automatically.
+                </p>
+                <div style="display: flex; gap: var(--space-3); justify-content: center;">
+                    <a href="<?= url('report-lost.php') ?>" class="btn btn-primary btn-sm">Report Lost Item</a>
+                    <a href="<?= url('report-found.php') ?>" class="btn btn-secondary btn-sm">Report Found Item</a>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </section>
 

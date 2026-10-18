@@ -41,6 +41,33 @@
     --color-info-bg: #f0f9ff;
     --color-info-border: #bae6fd;
 
+    /* Custody Status Colors */
+    --color-custody-finder: #d97706;          /* With Finder (Amber) */
+    --color-custody-finder-bg: #fffbeb;
+    --color-custody-finder-border: #fde68a;
+
+    --color-custody-security: #4338ca;        /* Submitted to Security Desk (Indigo) */
+    --color-custody-security-bg: #eef2ff;
+    --color-custody-security-border: #c7d2fe;
+
+    --color-custody-returned: #15803d;        /* Reunited with Owner (Green) */
+    --color-custody-returned-bg: #f0fdf4;
+    --color-custody-returned-border: #bbf7d0;
+
+    /* Confidential & Private Features */
+    --color-confidential: #7c3aed;            /* Secret details highlight (Purple) */
+    --color-confidential-hover: #6d28d9;
+    --color-confidential-bg: #f5f3ff;
+    --color-confidential-border: #ddd6fe;
+
+    /* Smart Match Score Grades */
+    --color-match-high: #16a34a;              /* Score >= 70% */
+    --color-match-high-bg: #dcfce7;
+    --color-match-med: #d97706;               /* 40% <= Score < 70% */
+    --color-match-med-bg: #fef3c7;
+    --color-match-low: #64748b;               /* Score < 40% */
+    --color-match-low-bg: #f1f5f9;
+
     /* Typography */
     --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
@@ -65,13 +92,28 @@
     --radius-full: 9999px;
 
     /* Elevation & Shadows */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.08), 0 1px 2px -1px rgba(15, 23, 42, 0.08);
+    --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.09), 0 2px 4px -2px rgba(15, 23, 42, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+    --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+
+    /* Accessible Focus System */
+    --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.35);
+    --focus-ring-danger: 0 0 0 3px rgba(220, 38, 38, 0.3);
+    --focus-outline: 2px solid var(--color-primary);
+    --focus-outline-offset: 2px;
+
+    /* Z-Index Hierarchy */
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-drawer: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-toast: 1060;
 
     /* Transitions & Layout */
-    --transition-fast: 150ms ease;
-    --transition-normal: 250ms ease;
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
     --max-content-width: 1200px;
 }

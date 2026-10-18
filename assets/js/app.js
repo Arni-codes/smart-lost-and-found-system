@@ -25,7 +25,82 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => alert.remove(), 300);
         }, 5000);
     });
+
+    // 3. Declarative Modal Triggers ([data-modal-target], [data-modal-close])
+    document.addEventListener('click', (e) => {
+        const openTrigger = e.target.closest('[data-modal-target]');
+        if (openTrigger) {
+            e.preventDefault();
+            const modalId = openTrigger.getAttribute('data-modal-target');
+            window.openModal(modalId);
+        }
+
+        const closeTrigger = e.target.closest('[data-modal-close]');
+        if (closeTrigger) {
+            e.preventDefault();
+            const modal = closeTrigger.closest('.modal');
+            if (modal) {
+                window.closeModal(modal.id);
+            }
+        }
+    });
+
+    // 4. Close Modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const activeModal = document.querySelector('.modal.is-visible');
+            if (activeModal) {
+                window.closeModal(activeModal.id);
+            }
+        }
+    });
 });
+
+/**
+ * Open a modal dialog with backdrop blur and focus management.
+ *
+ * @param {string} modalId Element ID of the modal container
+ */
+window.openModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+
+    let backdrop = document.querySelector('.modal-backdrop');
+    if (!backdrop) {
+        backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        document.body.appendChild(backdrop);
+    }
+
+    backdrop.classList.add('is-visible');
+    modal.classList.add('is-visible');
+    document.body.style.overflow = 'hidden';
+
+    // Focus first interactive element in modal
+    const focusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable) {
+        focusable.focus();
+    }
+};
+
+/**
+ * Close an active modal dialog.
+ *
+ * @param {string} modalId Element ID of the modal container
+ */
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('is-visible');
+    }
+
+    const backdrop = document.querySelector('.modal-backdrop');
+    if (backdrop) {
+        backdrop.classList.remove('is-visible');
+    }
+
+    document.body.style.overflow = '';
+};
 
 /**
  * Global CSRF Token Retrieval.
