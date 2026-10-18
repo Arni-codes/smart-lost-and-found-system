@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <defs>
+    <linearGradient id="gradPrimary" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+  </defs>
+  <!-- Shield Background -->
+  <path d="M50 8 L82 22 V50 C82 70 50 92 50 92 C50 92 18 70 18 50 V22 Z" fill="url(#gradPrimary)" />
+  <!-- Inner Shield Outline -->
+  <path d="M50 14 L76 25.5 V49 C76 65.5 50 84 50 84 C50 84 24 65.5 24 49 V25.5 Z" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="2" />
+  <!-- Box / Package Icon -->
+  <path d="M50 32 L68 41 L50 50 L32 41 Z" fill="#ffffff" fill-opacity="0.9" />
+  <path d="M32 43.5 L50 52.5 V71 L32 62 Z" fill="#e0f2fe" />
+  <path d="M68 43.5 L50 52.5 V71 L68 62 Z" fill="#bfdbfe" />
+  <!-- Magnifying Glass Search Accent -->
+  <circle cx="62" cy="62" r="10" fill="none" stroke="#38bdf8" stroke-width="4" />
+  <line x1="69" y1="69" x2="78" y2="78" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" />
+</svg>

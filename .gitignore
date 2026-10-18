@@ -1,0 +1,21 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# User Uploaded Media (keep placeholders and .htaccess only)
+uploads/items/*
+uploads/proofs/*
+!uploads/items/.gitkeep
+!uploads/proofs/.gitkeep
+!uploads/.htaccess
+
+# Local IDE & Editor Configurations
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment Overrides & Sensitive Local Secrets
+config/env.local.php
+*.log
