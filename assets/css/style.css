@@ -204,6 +204,10 @@ img {
     gap: var(--space-3);
 }
 
+.navbar-actions.mobile-visible {
+    display: none;
+}
+
 .mobile-menu-toggle {
     display: none;
     background: none;
