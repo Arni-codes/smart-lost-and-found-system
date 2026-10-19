@@ -107,7 +107,7 @@ $activeNav = $activeNav ?? 'home';
                     </li>
 
                     <!-- Mobile-Only Session Actions Container -->
-                    <li class="navbar-actions mobile-visible" style="margin-top: var(--space-2);">
+                    <li class="navbar-actions mobile-visible">
                         <?php if ($currentUser): ?>
                             <div class="user-greeting" style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: var(--space-2);">
                                 Hello, <strong><?= e($currentUser['full_name']) ?></strong>
