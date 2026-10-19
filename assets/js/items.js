@@ -226,8 +226,9 @@
                         window.location.href = newItemId ? `item-details.php?id=${newItemId}` : 'my-reports.php?tab=lost';
                     }, 800);
                 } else if (response.notImplemented) {
-                    console.info('[SCLFS Items] API not ready, falling back to native POST.');
-                    form.submit();
+                    const notice = 'Backend endpoint (api/items/create.php) has not been implemented yet by Member 3.';
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     let msg = response.message || 'Failed to submit report.';
                     if (Array.isArray(response.errors) && response.errors.length > 0) {
@@ -397,8 +398,9 @@
                         window.location.href = newItemId ? `item-details.php?id=${newItemId}` : 'my-reports.php?tab=found';
                     }, 800);
                 } else if (response.notImplemented) {
-                    console.info('[SCLFS Items] API not ready, falling back to native POST.');
-                    form.submit();
+                    const notice = 'Backend endpoint (api/items/create.php) has not been implemented yet by Member 3.';
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     let msg = response.message || 'Failed to submit report.';
                     if (Array.isArray(response.errors) && response.errors.length > 0) {

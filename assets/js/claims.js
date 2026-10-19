@@ -121,8 +121,9 @@
                         window.location.reload();
                     }, 1000);
                 } else if (response.notImplemented) {
-                    console.info('[SCLFS Claims] API not ready, falling back to native POST.');
-                    form.submit();
+                    const notice = 'Backend endpoint (api/claims/submit.php) has not been implemented yet by Member 5.';
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     let msg = response.message || 'Failed to submit ownership claim.';
                     if (Array.isArray(response.errors) && response.errors.length > 0) {

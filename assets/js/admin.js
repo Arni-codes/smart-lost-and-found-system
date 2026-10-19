@@ -97,14 +97,9 @@
                         window.location.href = 'admin/manage-claims.php';
                     }, 800);
                 } else if (response.notImplemented) {
-                    console.info('[SCLFS Admin] API not ready, submitting native POST.');
-                    // Append hidden input with action value before submitting
-                    const actionInput = document.createElement('input');
-                    actionInput.type = 'hidden';
-                    actionInput.name = 'action';
-                    actionInput.value = action;
-                    form.appendChild(actionInput);
-                    form.submit();
+                    const notice = 'Backend endpoint (api/claims/review.php) has not been implemented yet by Member 5.';
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     SCLFS.showToast(response.message || 'Adjudication failed.', 'danger');
                     SCLFS.setButtonLoading(submitBtn, false);
@@ -171,8 +166,9 @@
                         SCLFS.showToast('Physical handover recorded successfully. Reports closed.', 'success', 5000);
                         setTimeout(() => window.location.reload(), 1000);
                     } else if (response.notImplemented) {
-                        console.info('[SCLFS Handover] API not ready, falling back to native POST.');
-                        form.submit();
+                        const notice = 'Backend endpoint (api/admin/handover.php) has not been implemented yet by Member 5.';
+                        SCLFS.showToast(notice, 'warning', 6000);
+                        SCLFS.setButtonLoading(submitBtn, false);
                     } else {
                         SCLFS.showToast(response.message || 'Handover transaction failed.', 'danger');
                         SCLFS.setButtonLoading(submitBtn, false);

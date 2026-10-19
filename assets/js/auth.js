@@ -122,9 +122,10 @@
                         window.location.href = redirectUrl;
                     }, 500);
                 } else if (response.notImplemented) {
-                    // Backend endpoint pending: inform user and submit via native form POST
-                    console.info('[SCLFS Auth] API endpoint not ready. Falling back to native POST.');
-                    form.submit();
+                    const notice = 'Backend endpoint (api/auth/login.php) has not been implemented yet by Member 3. Please create the login API endpoint to enable authentication.';
+                    showAuthAlert(notice, 'warning');
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     const errorMsg = response.message || 'Invalid email or password. Please try again.';
                     showAuthAlert(errorMsg, 'danger');
@@ -298,9 +299,10 @@
                         window.location.href = 'login.php?registered=1';
                     }, 800);
                 } else if (response.notImplemented) {
-                    // Backend API not yet written: fall back to native POST
-                    console.info('[SCLFS Auth] API endpoint not ready. Falling back to native POST.');
-                    form.submit();
+                    const notice = 'Backend endpoint (api/auth/register.php) has not been implemented yet by Member 3. Please create the registration API endpoint to enable account creation.';
+                    showAuthAlert(notice, 'warning');
+                    SCLFS.showToast(notice, 'warning', 6000);
+                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     let errorMsg = response.message || 'Registration failed.';
                     if (Array.isArray(response.errors) && response.errors.length > 0) {
