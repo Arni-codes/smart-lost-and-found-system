@@ -17,6 +17,7 @@ if (is_logged_in()) {
 
 $pageTitle = 'Log In - ' . APP_SHORT_NAME;
 $activeNav = 'login';
+$extraScripts = ['assets/js/auth.js'];
 
 require_once __DIR__ . '/includes/header.php';
 ?>

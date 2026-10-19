@@ -17,6 +17,7 @@ if (is_logged_in()) {
 
 $pageTitle = 'Register Account - ' . APP_SHORT_NAME;
 $activeNav = 'register';
+$extraScripts = ['assets/js/auth.js'];
 
 require_once __DIR__ . '/includes/header.php';
 ?>
