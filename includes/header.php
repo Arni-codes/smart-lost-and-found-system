@@ -28,6 +28,8 @@ $activeNav = $activeNav ?? 'home';
     <link rel="stylesheet" href="<?= url('assets/css/responsive.css') ?>">
 </head>
 <body>
+    <!-- Skip to Main Content Accessibility Link -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
     <!-- Site Header & Global Navigation -->
     <header class="site-header">
@@ -42,8 +44,8 @@ $activeNav = $activeNav ?? 'home';
                 </a>
 
                 <!-- Mobile Hamburger Toggle -->
-                <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle navigation menu" aria-expanded="false">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button type="button" class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="navbarMenu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <line x1="3" y1="12" x2="21" y2="12"></line>
                         <line x1="3" y1="6" x2="21" y2="6"></line>
                         <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -72,29 +74,56 @@ $activeNav = $activeNav ?? 'home';
                             Report Found
                         </a>
                     </li>
-                    <li>
-                        <a href="<?= url('test_db.php') ?>" class="nav-link <?= $activeNav === 'test-db' ? 'active' : '' ?>">
-                            Database Status
-                        </a>
-                    </li>
 
                     <?php if ($currentUser): ?>
                         <li>
                             <a href="<?= url('dashboard.php') ?>" class="nav-link <?= $activeNav === 'dashboard' ? 'active' : '' ?>">
-                                My Dashboard
+                                Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?= url('claims.php') ?>" class="nav-link <?= $activeNav === 'claims' ? 'active' : '' ?>">
+                                Claims
+                            </a>
+                        </li>
+                        <li>
+                            <a href="<?= url('notifications.php') ?>" class="nav-link <?= $activeNav === 'notifications' ? 'active' : '' ?>">
+                                Notifications
                             </a>
                         </li>
                         <?php if (is_admin()): ?>
                             <li>
                                 <a href="<?= url('admin/index.php') ?>" class="nav-link <?= $activeNav === 'admin' ? 'active' : '' ?>">
-                                    Admin Panel
+                                    Admin Desk
                                 </a>
                             </li>
                         <?php endif; ?>
                     <?php endif; ?>
+
+                    <li>
+                        <a href="<?= url('test_db.php') ?>" class="nav-link <?= $activeNav === 'test-db' ? 'active' : '' ?>">
+                            Status
+                        </a>
+                    </li>
+
+                    <!-- Mobile-Only Session Actions Container -->
+                    <li class="navbar-actions mobile-visible" style="margin-top: var(--space-2);">
+                        <?php if ($currentUser): ?>
+                            <div class="user-greeting" style="font-size: 0.875rem; color: var(--color-text-muted); margin-bottom: var(--space-2);">
+                                Hello, <strong><?= e($currentUser['full_name']) ?></strong>
+                                <?php if (is_admin()): ?>
+                                    <span class="badge badge-warning">Admin</span>
+                                <?php endif; ?>
+                            </div>
+                            <a href="<?= url('api/auth/logout.php') ?>" class="btn btn-secondary btn-sm">Log Out</a>
+                        <?php else: ?>
+                            <a href="<?= url('login.php') ?>" class="btn btn-secondary btn-sm" style="margin-bottom: var(--space-2);">Log In</a>
+                            <a href="<?= url('register.php') ?>" class="btn btn-primary btn-sm">Register</a>
+                        <?php endif; ?>
+                    </li>
                 </ul>
 
-                <!-- User Session Actions -->
+                <!-- Desktop User Session Actions -->
                 <div class="navbar-actions">
                     <?php if ($currentUser): ?>
                         <div class="user-greeting" style="font-size: 0.875rem; color: var(--color-text-muted);">
