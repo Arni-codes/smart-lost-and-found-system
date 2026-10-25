@@ -7,36 +7,36 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Strictly Admin Only
-if (!is_admin()) {
-    flash_set('danger', 'Access denied. Administrator privileges required.');
-    header('Location: ' . url('login.php'));
-    exit;
-}
+require_admin(false);
 
 $pageTitle = 'Campus Users - ' . APP_SHORT_NAME;
 $activeNav = 'admin';
 
 $users = [];
 $search = trim($_GET['search'] ?? '');
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
 
     if ($search !== '') {
         $stmt = $pdo->prepare(
-            "SELECT id, role, student_id, full_name, email, phone, department, status, created_at 
+            "SELECT id, role, student_id, full_name, email, department, status, created_at
              FROM users 
-             WHERE full_name LIKE :s OR student_id LIKE :s OR email LIKE :s
+             WHERE full_name LIKE :name_search OR student_id LIKE :id_search OR email LIKE :email_search
              ORDER BY created_at DESC"
         );
-        $stmt->execute([':s' => '%' . $search . '%']);
+        $searchValue = '%' . $search . '%';
+        $stmt->execute([
+            ':name_search' => $searchValue,
+            ':id_search' => $searchValue,
+            ':email_search' => $searchValue,
+        ]);
     } else {
         $stmt = $pdo->query(
-            "SELECT id, role, student_id, full_name, email, phone, department, status, created_at 
+            "SELECT id, role, student_id, full_name, email, department, status, created_at
              FROM users 
              ORDER BY created_at DESC"
         );
@@ -44,7 +44,8 @@ try {
     $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Admin/users page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/admin.js'];
@@ -52,6 +53,9 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">User accounts could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 
@@ -116,9 +120,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <th>Full Name</th>
                                 <th>Email</th>
                                 <th>Department</th>
-                                <th>Phone</th>
-                                <th>Role</th>
-                                <th>Status</th>
+                                <th>Role &amp; Account Status</th>
                                 <th>Joined</th>
                             </tr>
                         </thead>
@@ -129,16 +131,24 @@ require_once __DIR__ . '/../includes/header.php';
                                     <td><strong><?= e($u['full_name']) ?></strong></td>
                                     <td><?= e($u['email']) ?></td>
                                     <td><?= e($u['department'] ?? 'General') ?></td>
-                                    <td><?= e($u['phone']) ?></td>
                                     <td>
-                                        <span class="badge <?= $u['role'] === 'admin' ? 'badge-warning' : 'badge-secondary' ?>">
-                                            <?= ucfirst(e($u['role'])) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge <?= $u['status'] === 'active' ? 'badge-success' : 'badge-danger' ?>">
-                                            <?= ucfirst(e($u['status'])) ?>
-                                        </span>
+                                        <form method="POST" action="<?= url('api/admin/users.php') ?>" class="admin-user-update-form" style="display: flex; gap: var(--space-2); align-items: center; min-width: 260px;">
+                                            <input type="hidden" name="csrf_token" value="<?= e(get_csrf_token()) ?>">
+                                            <input type="hidden" name="user_id" value="<?= e($u['id']) ?>">
+                                            <label class="sr-only" for="userRole<?= e($u['id']) ?>">Role for <?= e($u['full_name']) ?></label>
+                                            <select id="userRole<?= e($u['id']) ?>" name="role" class="form-select">
+                                                <?php foreach (['student', 'staff', 'admin'] as $role): ?>
+                                                    <option value="<?= e($role) ?>" <?= $u['role'] === $role ? 'selected' : '' ?>><?= ucfirst(e($role)) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <label class="sr-only" for="userStatus<?= e($u['id']) ?>">Status for <?= e($u['full_name']) ?></label>
+                                            <select id="userStatus<?= e($u['id']) ?>" name="status" class="form-select">
+                                                <?php foreach (['active', 'suspended'] as $status): ?>
+                                                    <option value="<?= e($status) ?>" <?= $u['status'] === $status ? 'selected' : '' ?>><?= ucfirst(e($status)) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                        </form>
                                     </td>
                                     <td><?= format_date($u['created_at']) ?></td>
                                 </tr>

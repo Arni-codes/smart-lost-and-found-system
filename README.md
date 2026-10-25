@@ -206,3 +206,13 @@ All members branch off the `develop` branch and work in their designated areas a
   - The `config/config.php` file automatically resolves the base URL path.
 - **Run the automated diagnostic:**
   - Visit: [http://localhost/smart-lost-and-found-system/test_db.php](http://localhost/smart-lost-and-found-system/test_db.php)
+
+## 10. Claims, Administration & Integration Checks
+
+Use the [integration checklist](tests/IntegrationChecklist.md) to verify the end-to-end
+report, matching, claim, review, handover, and notification flow before opening a pull
+request. It also records negative security tests and a consistent issue-report template.
+
+Claim proof images are stored under `uploads/proofs/` and are served only through the
+authenticated `api/claims/proof-view.php` endpoint. Do not remove the directory's
+`.htaccess` access denial.

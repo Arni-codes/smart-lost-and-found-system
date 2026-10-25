@@ -7,15 +7,9 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Strictly Admin Only
-if (!is_admin()) {
-    flash_set('danger', 'Access denied. Administrator privileges required.');
-    header('Location: ' . url('login.php'));
-    exit;
-}
+require_admin(false);
 
 $pageTitle = 'Adjudicate Claims - ' . APP_SHORT_NAME;
 $activeNav = 'admin';
@@ -23,6 +17,7 @@ $activeNav = 'admin';
 $claimId = (int)($_GET['id'] ?? 0);
 $claimsList = [];
 $selectedClaim = null;
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
@@ -33,9 +28,8 @@ try {
                     i.title AS item_title, i.description AS item_description, i.identifying_features, 
                     i.custody_status, i.image_path, i.incident_date,
                     cat.name AS category_name, loc.building, loc.specific_area,
-                    finder.full_name AS finder_name, finder.email AS finder_email,
-                    claimant.full_name AS claimant_name, claimant.student_id AS claimant_student_id, 
-                    claimant.email AS claimant_email, claimant.phone AS claimant_phone, claimant.department AS claimant_dept
+                    finder.full_name AS finder_name,
+                    claimant.full_name AS claimant_name, claimant.student_id AS claimant_student_id
              FROM claims c
              JOIN items i ON c.item_id = i.id
              JOIN categories cat ON i.category_id = cat.id
@@ -61,7 +55,8 @@ try {
     $claimsList = $qStmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Admin/manage-claims page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/admin.js'];
@@ -69,6 +64,9 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Claim records could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 
@@ -166,6 +164,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <!-- Adjudication Action Form -->
+                <?php if (in_array($selectedClaim['status'], ['pending', 'under_review'], true)): ?>
                 <form id="claimReviewForm" method="POST" action="<?= url('api/claims/review.php') ?>" style="margin-top: var(--space-6);">
                     <input type="hidden" name="csrf_token" value="<?= e(get_csrf_token()) ?>">
                     <input type="hidden" name="claim_id" value="<?= e($selectedClaim['id']) ?>">
@@ -178,6 +177,7 @@ require_once __DIR__ . '/../includes/header.php';
                                   name="admin_notes" 
                                   class="form-control" 
                                   rows="3" 
+                                  maxlength="2000"
                                   placeholder="State reasoning for decision or collection instructions for the claimant..."><?= e($selectedClaim['admin_notes'] ?? '') ?></textarea>
                     </div>
 
@@ -193,6 +193,15 @@ require_once __DIR__ . '/../includes/header.php';
                         </button>
                     </div>
                 </form>
+                <?php else: ?>
+                    <div class="alert alert-info" style="margin-top: var(--space-6);">
+                        <?php if ($selectedClaim['status'] === 'approved'): ?>
+                            This claim is approved and awaiting physical handover at the Security Desk.
+                        <?php else: ?>
+                            This claim is no longer reviewable.
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>

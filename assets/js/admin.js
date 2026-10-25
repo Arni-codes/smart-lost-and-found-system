@@ -35,7 +35,7 @@
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const action = selectedAction || 'approve';
+            const action = (e.submitter && e.submitter.value) || selectedAction || 'approve';
             const notes = (adminNotes ? adminNotes.value : '').trim();
 
             if (action === 'reject' && !notes) {
@@ -96,10 +96,6 @@
                     setTimeout(() => {
                         window.location.href = 'admin/manage-claims.php';
                     }, 800);
-                } else if (response.notImplemented) {
-                    const notice = 'Backend endpoint (api/claims/review.php) has not been implemented yet by Member 5.';
-                    SCLFS.showToast(notice, 'warning', 6000);
-                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     SCLFS.showToast(response.message || 'Adjudication failed.', 'danger');
                     SCLFS.setButtonLoading(submitBtn, false);
@@ -165,10 +161,6 @@
                     if (response.success) {
                         SCLFS.showToast('Physical handover recorded successfully. Reports closed.', 'success', 5000);
                         setTimeout(() => window.location.reload(), 1000);
-                    } else if (response.notImplemented) {
-                        const notice = 'Backend endpoint (api/admin/handover.php) has not been implemented yet by Member 5.';
-                        SCLFS.showToast(notice, 'warning', 6000);
-                        SCLFS.setButtonLoading(submitBtn, false);
                     } else {
                         SCLFS.showToast(response.message || 'Handover transaction failed.', 'danger');
                         SCLFS.setButtonLoading(submitBtn, false);
@@ -206,17 +198,82 @@
         });
     }
 
+    function initUserAccountUpdates() {
+        document.querySelectorAll('.admin-user-update-form').forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const button = form.querySelector('button[type="submit"]');
+                SCLFS.setButtonLoading(button, true, 'Saving...');
+                try {
+                    const response = await SCLFS.fetchAPI(form.action, {
+                        method: 'POST',
+                        body: new FormData(form)
+                    });
+                    if (!response.success) {
+                        throw new Error(response.message || 'Unable to update user account.');
+                    }
+                    SCLFS.showToast('User account updated.', 'success');
+                    window.location.reload();
+                } catch (error) {
+                    SCLFS.showToast(error.message || 'Unable to update user account.', 'danger');
+                    SCLFS.setButtonLoading(button, false);
+                }
+            });
+        });
+    }
+
+    function initItemModeration() {
+        document.querySelectorAll('.admin-item-moderation-form').forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const reason = form.querySelector('[name="reason"]');
+                if (!reason.value.trim()) {
+                    SCLFS.showToast('Provide a reason for this moderation action.', 'warning');
+                    reason.focus();
+                    return;
+                }
+                const confirmed = await SCLFS.confirm(
+                    'Moderate Item Report',
+                    'This status change cannot be used to approve a claim or complete a handover. Continue?',
+                    { confirmText: 'Apply Moderation', cancelText: 'Cancel', confirmVariant: 'danger' }
+                );
+                if (!confirmed) return;
+
+                const button = form.querySelector('button[type="submit"]');
+                SCLFS.setButtonLoading(button, true, 'Updating...');
+                try {
+                    const response = await SCLFS.fetchAPI(form.action, {
+                        method: 'POST',
+                        body: new FormData(form)
+                    });
+                    if (!response.success) {
+                        throw new Error(response.message || 'Unable to moderate item.');
+                    }
+                    SCLFS.showToast('Item report moderated.', 'success');
+                    window.location.reload();
+                } catch (error) {
+                    SCLFS.showToast(error.message || 'Unable to moderate item.', 'danger');
+                    SCLFS.setButtonLoading(button, false);
+                }
+            });
+        });
+    }
+
     // DOM Ready initialization
     document.addEventListener('DOMContentLoaded', () => {
         initClaimAdjudication();
         initHandoverTerminal();
         initUserTableFilter();
+        initUserAccountUpdates();
+        initItemModeration();
     });
 
     SCLFS.admin = {
         initClaimAdjudication,
         initHandoverTerminal,
-        initUserTableFilter
+        initUserTableFilter,
+        initUserAccountUpdates,
+        initItemModeration
     };
 
 })(window, document);

@@ -7,15 +7,9 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Strictly Admin Only
-if (!is_admin()) {
-    flash_set('danger', 'Access denied. Administrator privileges required.');
-    header('Location: ' . url('login.php'));
-    exit;
-}
+require_admin(false);
 
 $pageTitle = 'Admin Desk Dashboard - ' . APP_SHORT_NAME;
 $activeNav = 'admin';
@@ -31,6 +25,7 @@ $stats = [
 ];
 $recentClaims = [];
 $recentLogs = [];
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
@@ -39,7 +34,7 @@ try {
     $stats['open_lost']        = (int)$pdo->query("SELECT COUNT(*) FROM items WHERE item_type = 'lost' AND status = 'open'")->fetchColumn();
     $stats['open_found']       = (int)$pdo->query("SELECT COUNT(*) FROM items WHERE item_type = 'found' AND status = 'open'")->fetchColumn();
     $stats['security_custody'] = (int)$pdo->query("SELECT COUNT(*) FROM items WHERE custody_status = 'submitted_to_security'")->fetchColumn();
-    $stats['pending_claims']   = (int)$pdo->query("SELECT COUNT(*) FROM claims WHERE status = 'pending'")->fetchColumn();
+    $stats['pending_claims']   = (int)$pdo->query("SELECT COUNT(*) FROM claims WHERE status IN ('pending', 'under_review')")->fetchColumn();
     $stats['reunited_total']   = (int)$pdo->query("SELECT COUNT(*) FROM items WHERE status = 'claimed'")->fetchColumn();
 
     if ($stats['total_reported'] > 0) {
@@ -61,13 +56,17 @@ try {
     $recentClaims = $cStmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Admin dashboard error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Dashboard data could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 

@@ -120,10 +120,6 @@
                     setTimeout(() => {
                         window.location.reload();
                     }, 1000);
-                } else if (response.notImplemented) {
-                    const notice = 'Backend endpoint (api/claims/submit.php) has not been implemented yet by Member 5.';
-                    SCLFS.showToast(notice, 'warning', 6000);
-                    SCLFS.setButtonLoading(submitBtn, false);
                 } else {
                     let msg = response.message || 'Failed to submit ownership claim.';
                     if (Array.isArray(response.errors) && response.errors.length > 0) {
@@ -140,13 +136,46 @@
         });
     }
 
+    function initClaimCancellation() {
+        document.querySelectorAll('.claim-cancel-form').forEach(form => {
+            form.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const confirmed = await SCLFS.confirm(
+                    'Cancel Ownership Claim',
+                    'Cancel this claim? The item may become available for other claims.',
+                    { confirmText: 'Cancel Claim', cancelText: 'Keep Claim', confirmVariant: 'danger' }
+                );
+                if (!confirmed) return;
+
+                const button = form.querySelector('button[type="submit"]');
+                SCLFS.setButtonLoading(button, true, 'Cancelling...');
+                try {
+                    const response = await SCLFS.fetchAPI(form.action, {
+                        method: 'POST',
+                        body: new FormData(form)
+                    });
+                    if (!response.success) {
+                        throw new Error(response.message || 'Unable to cancel claim.');
+                    }
+                    SCLFS.showToast('Claim cancelled.', 'success');
+                    window.location.reload();
+                } catch (error) {
+                    SCLFS.showToast(error.message || 'Unable to cancel claim.', 'danger');
+                    SCLFS.setButtonLoading(button, false);
+                }
+            });
+        });
+    }
+
     // DOM Ready initialization
     document.addEventListener('DOMContentLoaded', () => {
         initClaimForm();
+        initClaimCancellation();
     });
 
     SCLFS.claims = {
-        initClaimForm
+        initClaimForm,
+        initClaimCancellation
     };
 
 })(window, document);
