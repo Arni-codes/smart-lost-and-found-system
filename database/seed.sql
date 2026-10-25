@@ -5,16 +5,23 @@
 
 USE smart_lost_and_found;
 
-SET FOREIGN_KEY_CHECKS = 0;
-TRUNCATE TABLE audit_logs;
-TRUNCATE TABLE notifications;
-TRUNCATE TABLE claims;
-TRUNCATE TABLE smart_matches;
-TRUNCATE TABLE items;
-TRUNCATE TABLE locations;
-TRUNCATE TABLE categories;
-TRUNCATE TABLE users;
-SET FOREIGN_KEY_CHECKS = 1;
+DELETE FROM audit_logs;
+DELETE FROM notifications;
+DELETE FROM claims;
+DELETE FROM smart_matches;
+DELETE FROM items;
+DELETE FROM locations;
+DELETE FROM categories;
+DELETE FROM users;
+
+ALTER TABLE audit_logs AUTO_INCREMENT = 1;
+ALTER TABLE notifications AUTO_INCREMENT = 1;
+ALTER TABLE claims AUTO_INCREMENT = 1;
+ALTER TABLE smart_matches AUTO_INCREMENT = 1;
+ALTER TABLE items AUTO_INCREMENT = 1;
+ALTER TABLE locations AUTO_INCREMENT = 1;
+ALTER TABLE categories AUTO_INCREMENT = 1;
+ALTER TABLE users AUTO_INCREMENT = 1;
 
 -- ---------------------------------------------------------------------
 -- 1. SEED CATEGORIES

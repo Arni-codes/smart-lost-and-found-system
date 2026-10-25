@@ -30,8 +30,8 @@ if (!defined('BASE_URL')) {
     $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
     $scriptDir = dirname($scriptName);
 
-    // If installed in a subdirectory (e.g. /smart-lost-and-found-system)
-    if (preg_match('#(/[^/]*smart-lost-and-found-system[^/]*)#i', $scriptName, $matches)) {
+    // Include any parent directories as well as the project directory (e.g. /web/smart-lost-and-found-system)
+    if (preg_match('#^(.*?/[^/]*smart-lost-and-found-system[^/]*)(?:/|$)#i', $scriptName, $matches)) {
         define('BASE_URL', rtrim($matches[1], '/'));
     } elseif ($scriptDir === '/' || $scriptDir === '\\' || $scriptDir === '.') {
         define('BASE_URL', '');

@@ -99,6 +99,8 @@ The `database/seed.sql` fixture provides pre-configured demo accounts for gradin
 
 > [!CAUTION]
 > Passwords in the database are stored as **Bcrypt hashes**; plaintext passwords are never stored in SQL. Before deploying to any public or staging server, change or remove these demo accounts.
+>
+> Importing `database/seed.sql` clears and replaces the existing application data with the demo fixture. Do not import it if you need to keep current users, reports, or claims.
 
 ---
 
