@@ -134,7 +134,7 @@ if (!empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE
     if (!$upload['ok']) {
         json_response(false, $upload['error'], null, null, 422);
     }
-    $imagePath = $upload['path'];
+    $imagePath = $upload['filename'];
 }
 
 // ── Insert item ──────────────────────────────────────────────────────────────

@@ -146,7 +146,8 @@ try {
     $currentUserId = $_SESSION['user_id'] ?? null;
     foreach ($items as &$item) {
         $item['is_owner']    = ($currentUserId && (int) $item['user_id'] === (int) $currentUserId);
-        $item['image_url']   = !empty($item['image_path']) ? url($item['image_path']) : null;
+        $item['image_path']  = !empty($item['image_path']) ? basename($item['image_path']) : null;
+        $item['image_url']   = !empty($item['image_path']) ? url('uploads/items/' . $item['image_path']) : null;
         // identifying_features is intentionally never added here
         unset($item['user_id']); // do not expose user_id to public
     }

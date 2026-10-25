@@ -80,7 +80,8 @@ try {
     // Add computed fields
     $item['is_owner']    = $isOwner;
     $item['can_edit']    = $canSeePrivate;
-    $item['image_url']   = !empty($item['image_path']) ? url($item['image_path']) : null;
+    $item['image_path']  = !empty($item['image_path']) ? basename($item['image_path']) : null;
+    $item['image_url']   = !empty($item['image_path']) ? url('uploads/items/' . $item['image_path']) : null;
 
     // Never expose internal user_id in the public payload
     if (!$isAdminUser) {
