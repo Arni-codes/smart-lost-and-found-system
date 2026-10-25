@@ -7,15 +7,9 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Must be authenticated
-if (!is_logged_in()) {
-    flash_set('warning', 'Please log in to track your ownership claims.');
-    header('Location: ' . url('login.php?redirect=claims.php'));
-    exit;
-}
+require_login(false);
 
 $pageTitle = 'Claims Tracking - ' . APP_SHORT_NAME;
 $activeNav = 'claims';
@@ -25,6 +19,7 @@ $userId = (int)$currentUser['id'];
 
 $mySubmittedClaims = [];
 $claimsOnMyFoundItems = [];
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
@@ -61,7 +56,8 @@ try {
     $claimsOnMyFoundItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Claims page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/claims.js'];
@@ -69,6 +65,9 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Claims could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 
@@ -126,18 +125,26 @@ require_once __DIR__ . '/includes/header.php';
                                     <td><?= e($claim['category_name']) ?> &bull; <?= e($claim['building']) ?></td>
                                     <td><?= format_date($claim['created_at']) ?></td>
                                     <td>
-                                        <?php if ($claim['status'] === 'approved'): ?>
+                                        <?php if ($claim['status'] === 'approved' && !empty($claim['handover_date'])): ?>
+                                            <span class="badge badge-success">Handed Over</span>
+                                        <?php elseif ($claim['status'] === 'approved'): ?>
                                             <span class="badge badge-success">Approved</span>
                                         <?php elseif ($claim['status'] === 'under_review'): ?>
                                             <span class="badge badge-info">Under Review</span>
                                         <?php elseif ($claim['status'] === 'rejected'): ?>
                                             <span class="badge badge-danger">Rejected</span>
+                                        <?php elseif ($claim['status'] === 'cancelled'): ?>
+                                            <span class="badge badge-secondary">Cancelled</span>
                                         <?php else: ?>
                                             <span class="badge badge-warning">Pending Review</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($claim['status'] === 'approved'): ?>
+                                        <?php if ($claim['status'] === 'approved' && !empty($claim['handover_date'])): ?>
+                                            <div style="font-size: 0.8125rem; color: var(--color-success); font-weight: 600;">
+                                                &check; Handover completed on <?= format_datetime($claim['handover_date']) ?>.
+                                            </div>
+                                        <?php elseif ($claim['status'] === 'approved'): ?>
                                             <div style="font-size: 0.8125rem; color: var(--color-success); font-weight: 600;">
                                                 &check; Approved for handover at Security Desk!
                                             </div>
@@ -158,6 +165,13 @@ require_once __DIR__ . '/includes/header.php';
                                         <a href="<?= url('item-details.php?id=' . $claim['item_id']) ?>" class="btn btn-outline btn-sm">
                                             View Item
                                         </a>
+                                        <?php if (in_array($claim['status'], ['pending', 'under_review', 'approved'], true) && empty($claim['handover_date'])): ?>
+                                            <form method="POST" action="<?= url('api/claims/cancel.php') ?>" class="claim-cancel-form" style="margin-top: var(--space-2);">
+                                                <input type="hidden" name="csrf_token" value="<?= e(get_csrf_token()) ?>">
+                                                <input type="hidden" name="claim_id" value="<?= e($claim['id']) ?>">
+                                                <button type="submit" class="btn btn-danger btn-sm">Cancel Claim</button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -218,7 +232,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </td>
                                     <td><?= format_date($rec['claim_date']) ?></td>
                                     <td>
-                                        <span class="badge <?= $rec['claim_status'] === 'approved' ? 'badge-success' : 'badge-warning' ?>">
+                                        <span class="badge <?= $rec['claim_status'] === 'approved' ? 'badge-success' : ($rec['claim_status'] === 'rejected' ? 'badge-danger' : ($rec['claim_status'] === 'under_review' ? 'badge-info' : ($rec['claim_status'] === 'cancelled' ? 'badge-secondary' : 'badge-warning'))) ?>">
                                             <?= ucfirst(e($rec['claim_status'])) ?>
                                         </span>
                                     </td>

@@ -27,11 +27,13 @@ $page   = max(1, (int) ($_GET['page']     ?? 1));
 $limit  = min(50, max(1, (int) ($_GET['limit'] ?? 20)));
 $offset = ($page - 1) * $limit;
 $status = trim($_GET['status'] ?? '');
-
 $where  = [];
 $params = [];
 $allowedStatuses = ['pending', 'under_review', 'approved', 'rejected', 'cancelled'];
-if (in_array($status, $allowedStatuses, true)) {
+if ($status !== '' && !in_array($status, $allowedStatuses, true)) {
+    json_response(false, 'Invalid claim status filter.', null, null, 422);
+}
+if ($status !== '') {
     $where[]           = 'cl.status = :status';
     $params[':status'] = $status;
 }
@@ -76,7 +78,6 @@ try {
              -- Reviewing admin
              au.full_name AS reviewed_by_name
          FROM claims cl
-         JOIN users u2 ON u2.id = cl.claimant_id  -- alias avoided
          JOIN users cu ON cu.id = cl.claimant_id
          JOIN items fi ON fi.id = cl.item_id
          LEFT JOIN users au ON au.id = cl.reviewed_by_admin_id
@@ -101,6 +102,7 @@ try {
         $claim['proof_image_url'] = !empty($claim['proof_image_path'])
             ? url('api/claims/proof-view.php?claim_id=' . $claim['id'])
             : null;
+        unset($claim['proof_image_path']);
     }
     unset($claim);
 

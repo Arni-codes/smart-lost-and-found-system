@@ -7,15 +7,9 @@
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Must be authenticated
-if (!is_logged_in()) {
-    flash_set('warning', 'Please log in to view your notifications.');
-    header('Location: ' . url('login.php?redirect=notifications.php'));
-    exit;
-}
+require_login(false);
 
 $pageTitle = 'Notifications - ' . APP_SHORT_NAME;
 $activeNav = 'notifications';
@@ -25,6 +19,7 @@ $userId = (int)$currentUser['id'];
 
 $notifications = [];
 $unreadFilter = isset($_GET['unread']);
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
@@ -40,7 +35,8 @@ try {
     $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Notifications page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/notifications.js'];
@@ -48,6 +44,9 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8); max-width: 860px;">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Notifications could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 

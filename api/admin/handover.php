@@ -50,9 +50,14 @@ if (!$studentIdConfirmed) {
     json_response(false, 'Student ID verification is required before completing the handover.', null, null, 422);
 }
 
-$pdo = get_db_connection();
+$handoverNotes = trim($handoverNotes);
+if (mb_strlen($handoverNotes) > 1000) {
+    json_response(false, 'Handover notes may not exceed 1000 characters.', null, null, 422);
+}
 
+$pdo = null;
 try {
+    $pdo = get_db_connection();
     $pdo->beginTransaction();
 
     // ── Step 1: Lock & validate Claim ────────────────────────────────────────
@@ -83,9 +88,9 @@ try {
     $stmt->execute([':id' => $claim['item_id']]);
     $item = $stmt->fetch();
 
-    if (!$item) {
+    if (!$item || $item['item_type'] !== 'found') {
         $pdo->rollBack();
-        json_response(false, 'Associated item not found.', null, null, 404);
+        json_response(false, 'Associated found item not found.', null, null, 404);
     }
     if (!in_array($item['status'], ['open', 'pending_claim'], true)) {
         $pdo->rollBack();
@@ -114,35 +119,41 @@ try {
         $stmt->execute([':id' => $claim['lost_item_id']]);
 
         // Notify the lost-item owner (the claimant)
-        NotificationService::send(
+        if (!NotificationService::send(
             (int) $claim['claimant_id'],
             'Lost Item Report Closed',
             'Your lost report #' . $claim['lost_item_id'] . ' was automatically closed following the successful handover of "' . $claim['item_title'] . '" at the Security Desk.',
             'system',
             (int) $claim['lost_item_id'],
             url('item-details.php?id=' . $claim['lost_item_id'])
-        );
+        )) {
+            throw new RuntimeException('Unable to notify the claimant about the closed lost report.');
+        }
     }
 
     // ── Step 6: Notify claimant of successful handover ───────────────────────
-    NotificationService::send(
+    if (!NotificationService::send(
         (int) $claim['claimant_id'],
         'Item Handover Complete 🎉',
         'Your claim for "' . $claim['item_title'] . '" has been verified and the item has been returned to you at the Campus Security Desk.',
         'claim_status',
         (int) $claim['item_id'],
         url('item-details.php?id=' . $claim['item_id'])
-    );
+    )) {
+        throw new RuntimeException('Unable to notify the claimant about the handover.');
+    }
 
     // ── Step 6b: Notify finder ───────────────────────────────────────────────
-    NotificationService::send(
+    if (!NotificationService::send(
         (int) $claim['finder_user_id'],
         'Item Successfully Returned to Owner',
         'The item you found ("' . $claim['item_title'] . '") has been verified and returned to its rightful owner at the Security Desk. Thank you for your honesty!',
         'custody_update',
         (int) $claim['item_id'],
         url('item-details.php?id=' . $claim['item_id'])
-    );
+    )) {
+        throw new RuntimeException('Unable to notify the item reporter about the handover.');
+    }
 
     // ── Step 7: Audit log ────────────────────────────────────────────────────
     $stmt = $pdo->prepare(
@@ -172,7 +183,9 @@ try {
     ]);
 
 } catch (Throwable $e) {
-    $pdo->rollBack();
+    if ($pdo instanceof PDO && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     error_log('Admin/handover transaction error: ' . $e->getMessage());
-    json_response(false, 'Handover transaction failed. Please try again. Error: ' . $e->getMessage(), null, null, 500);
+    json_response(false, 'Handover transaction failed. Please try again.', null, null, 500);
 }

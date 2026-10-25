@@ -4,7 +4,7 @@
  * GET|POST /api/admin/items.php — Admin Item Moderation
  *
  * GET  — list all items with full details (including identifying_features)
- * POST — update item status (reject spam, reopen, change custody)
+ * POST — close or reject an open item report
  *
  * Authorization: Admin only.
  */
@@ -15,8 +15,13 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/functions.php';
 require_once __DIR__ . '/../../includes/auth_middleware.php';
+require_once __DIR__ . '/../../services/NotificationService.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST'], true)) {
+    json_response(false, 'Method not allowed.', null, null, 405);
+}
 
 require_admin();
 $adminId = (int) $_SESSION['user_id'];
@@ -30,14 +35,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $status = trim($_GET['status'] ?? '');
     $type   = trim($_GET['type']   ?? '');
 
+    if ($status !== '' && !in_array($status, ['open', 'pending_claim', 'claimed', 'closed', 'rejected'], true)) {
+        json_response(false, 'Invalid item status filter.', null, null, 422);
+    }
+    if ($type !== '' && !in_array($type, ['lost', 'found'], true)) {
+        json_response(false, 'Invalid item type filter.', null, null, 422);
+    }
+
     $where  = [];
     $params = [];
 
-    if (!empty($status) && in_array($status, ['open','pending_claim','claimed','closed','rejected'], true)) {
+    if ($status !== '') {
         $where[]          = 'i.status = :status';
         $params[':status']= $status;
     }
-    if (in_array($type, ['lost','found'], true)) {
+    if ($type !== '') {
         $where[]         = 'i.item_type = :type';
         $params[':type'] = $type;
     }
@@ -61,8 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $stmt = $pdo->prepare(
             "SELECT i.*, c.name AS category_name, l.building, l.campus_zone,
-                    u.full_name AS reporter_name, u.email AS reporter_email,
-                    u.student_id AS reporter_student_id
+                    u.full_name AS reporter_name
              FROM items i
              LEFT JOIN categories c ON c.id = i.category_id
              LEFT JOIN locations  l ON l.id = i.location_id
@@ -109,34 +120,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         json_response(false, 'A valid item ID is required.', null, null, 400);
     }
 
-    $allowedStatuses = ['open', 'pending_claim', 'claimed', 'closed', 'rejected'];
-    if (!in_array($newStatus, $allowedStatuses, true)) {
-        json_response(false, 'Invalid status value.', null, null, 422);
+    if (!in_array($newStatus, ['closed', 'rejected'], true)) {
+        json_response(false, 'Administrators may only close or reject an open item. Claim and handover statuses are workflow-controlled.', null, null, 422);
+    }
+    if (mb_strlen($reason) < 5 || mb_strlen($reason) > 500) {
+        json_response(false, 'A moderation reason between 5 and 500 characters is required.', null, null, 422);
     }
 
+    $pdo = null;
     try {
         $pdo  = get_db_connection();
-        $stmt = $pdo->prepare('SELECT id, status FROM items WHERE id = :id LIMIT 1');
+        $pdo->beginTransaction();
+        $stmt = $pdo->prepare('SELECT id, status FROM items WHERE id = :id FOR UPDATE');
         $stmt->execute([':id' => $itemId]);
         $item = $stmt->fetch();
 
         if (!$item) {
+            $pdo->rollBack();
             json_response(false, 'Item not found.', null, null, 404);
         }
+        if ($item['status'] !== 'open') {
+            $pdo->rollBack();
+            json_response(false, 'Only open items may be closed or rejected through moderation.', null, null, 409);
+        }
 
-        $stmt = $pdo->prepare('UPDATE items SET status = :status WHERE id = :id');
+        $stmt = $pdo->prepare("UPDATE items SET status = :status WHERE id = :id AND status = 'open'");
         $stmt->execute([':status' => $newStatus, ':id' => $itemId]);
+        if ($stmt->rowCount() !== 1) {
+            throw new RuntimeException('Item status changed while moderation was in progress.');
+        }
 
-        log_audit_event('ITEM_STATUS_CHANGED', 'item', $itemId, [
-            'from'       => $item['status'],
-            'to'         => $newStatus,
-            'reason'     => $reason,
-            'changed_by' => $adminId,
+        $stmt = $pdo->prepare(
+            "INSERT INTO audit_logs (user_id, action, target_type, target_id, details, ip_address)
+             VALUES (:uid, 'ITEM_STATUS_CHANGED', 'item', :item_id, :details, :ip)"
+        );
+        $stmt->execute([
+            ':uid' => $adminId,
+            ':item_id' => $itemId,
+            ':details' => json_encode([
+                'from' => $item['status'],
+                'to' => $newStatus,
+                'reason' => $reason,
+            ]),
+            ':ip' => $_SERVER['REMOTE_ADDR'] ?? null,
         ]);
+
+        $reporterStmt = $pdo->prepare('SELECT user_id, title FROM items WHERE id = :id');
+        $reporterStmt->execute([':id' => $itemId]);
+        $reporter = $reporterStmt->fetch();
+        if (!$reporter || !NotificationService::send(
+            (int) $reporter['user_id'],
+            'Your Item Report Was Moderated',
+            'Your report "' . $reporter['title'] . '" was ' . $newStatus . '. Reason: ' . $reason,
+            'admin_alert',
+            $itemId,
+            url('my-reports.php')
+        )) {
+            throw new RuntimeException('Unable to notify the report owner.');
+        }
+
+        $pdo->commit();
 
         json_response(true, 'Item status updated to "' . $newStatus . '".', ['item_id' => $itemId, 'status' => $newStatus]);
 
-    } catch (PDOException $e) {
+    } catch (Throwable $e) {
+        if ($pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         error_log('Admin/items POST error: ' . $e->getMessage());
         json_response(false, 'Failed to update item status.', null, null, 500);
     }

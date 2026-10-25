@@ -39,15 +39,37 @@ class NotificationService
         string  $message,
         string  $type        = 'system',
         ?int    $referenceId = null,
-        ?string $referenceUrl = null
+        ?string $referenceUrl = null,
+        bool    $deduplicate  = true
     ): bool {
         if (!in_array($type, self::VALID_TYPES, true)) {
             error_log("NotificationService::send — invalid type '{$type}' for user {$userId}");
-            $type = 'system';
+            return false;
         }
 
         try {
             $pdo  = get_db_connection();
+            if ($deduplicate) {
+                $duplicateStmt = $pdo->prepare(
+                    'SELECT id FROM notifications
+                     WHERE user_id = :uid AND title = :title AND type = :type
+                       AND reference_id ' . ($referenceId === null ? 'IS NULL' : '= :ref') . '
+                     LIMIT 1'
+                );
+                $duplicateParams = [
+                    ':uid'   => $userId,
+                    ':title' => mb_substr($title, 0, 150),
+                    ':type'  => $type,
+                ];
+                if ($referenceId !== null) {
+                    $duplicateParams[':ref'] = $referenceId;
+                }
+                $duplicateStmt->execute($duplicateParams);
+                if ($duplicateStmt->fetchColumn()) {
+                    return true;
+                }
+            }
+
             $stmt = $pdo->prepare(
                 'INSERT INTO notifications (user_id, title, message, type, reference_id, reference_url)
                  VALUES (:uid, :title, :msg, :type, :ref, :url)'
@@ -98,14 +120,9 @@ class NotificationService
      */
     public static function getUnreadCount(int $userId): int
     {
-        try {
-            $pdo  = get_db_connection();
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = 0');
-            $stmt->execute([':uid' => $userId]);
-            return (int) $stmt->fetchColumn();
-        } catch (Throwable $e) {
-            error_log("NotificationService::getUnreadCount error: " . $e->getMessage());
-            return 0;
-        }
+        $pdo  = get_db_connection();
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = :uid AND is_read = 0');
+        $stmt->execute([':uid' => $userId]);
+        return (int) $stmt->fetchColumn();
     }
 }

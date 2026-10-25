@@ -8,6 +8,7 @@ uploads/items/*
 uploads/proofs/*
 !uploads/items/.gitkeep
 !uploads/proofs/.gitkeep
+!uploads/proofs/.htaccess
 !uploads/.htaccess
 
 # Local IDE & Editor Configurations

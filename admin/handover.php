@@ -7,21 +7,16 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Strictly Admin / Desk Officer Only
-if (!is_admin()) {
-    flash_set('danger', 'Access denied. Administrator privileges required.');
-    header('Location: ' . url('login.php'));
-    exit;
-}
+require_admin(false);
 
 $pageTitle = 'Desk Handover Terminal - ' . APP_SHORT_NAME;
 $activeNav = 'admin';
 
 $approvedClaims = [];
 $completedHandovers = [];
+$loadError = false;
 
 try {
     $pdo = get_db_connection();
@@ -30,7 +25,7 @@ try {
     $stmt = $pdo->query(
         "SELECT c.id AS claim_id, c.status, c.created_at, c.admin_notes,
                 i.id AS item_id, i.title AS item_title, i.custody_status,
-                u.id AS claimant_id, u.full_name AS claimant_name, u.student_id, u.department, u.phone
+                u.id AS claimant_id, u.full_name AS claimant_name, u.student_id
          FROM claims c
          JOIN items i ON c.item_id = i.id
          JOIN users u ON c.claimant_id = u.id
@@ -54,7 +49,8 @@ try {
     $completedHandovers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Admin/handover page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/admin.js'];
@@ -62,6 +58,9 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Handover records could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 
@@ -115,9 +114,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     </h3>
                                     <div style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 4px;">
                                         Claimant: <strong><?= e($claim['claimant_name']) ?></strong> &bull; 
-                                        Roll No: <code><?= e($claim['student_id']) ?></code> &bull; 
-                                        Dept: <?= e($claim['department']) ?> &bull; 
-                                        Phone: <?= e($claim['phone']) ?>
+                                        Roll No: <code><?= e($claim['student_id']) ?></code>
                                     </div>
                                 </div>
                                 <div>

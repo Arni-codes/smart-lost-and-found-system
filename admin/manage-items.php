@@ -7,20 +7,15 @@
 require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/auth_middleware.php';
 
-init_session();
-
-// Guard: Strictly Admin Only
-if (!is_admin()) {
-    flash_set('danger', 'Access denied. Administrator privileges required.');
-    header('Location: ' . url('login.php'));
-    exit;
-}
+require_admin(false);
 
 $pageTitle = 'Manage Campus Items - ' . APP_SHORT_NAME;
 $activeNav = 'admin';
 
 $items = [];
+$loadError = false;
 $statusFilter = $_GET['status'] ?? 'all';
 $typeFilter = $_GET['type'] ?? 'all';
 
@@ -55,7 +50,8 @@ try {
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (Throwable $e) {
-    // Graceful error fallback
+    error_log('Admin/manage-items page error: ' . $e->getMessage());
+    $loadError = true;
 }
 
 $extraScripts = ['assets/js/admin.js'];
@@ -63,6 +59,9 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container section" style="padding-top: var(--space-8);">
+    <?php if ($loadError): ?>
+        <div class="alert alert-danger" role="alert">Item reports could not be loaded. Please try again later.</div>
+    <?php endif; ?>
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" style="font-size: 0.8125rem; color: var(--color-text-muted); margin-bottom: var(--space-4);">
         <a href="<?= url('index.php') ?>">Home</a> &rsaquo; 
@@ -107,6 +106,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <option value="pending_claim" <?= $statusFilter === 'pending_claim' ? 'selected' : '' ?>>Pending Claim</option>
                     <option value="claimed" <?= $statusFilter === 'claimed' ? 'selected' : '' ?>>Claimed</option>
                     <option value="closed" <?= $statusFilter === 'closed' ? 'selected' : '' ?>>Closed</option>
+                    <option value="rejected" <?= $statusFilter === 'rejected' ? 'selected' : '' ?>>Rejected</option>
                 </select>
             </div>
 
@@ -175,6 +175,20 @@ require_once __DIR__ . '/../includes/header.php';
                                         <a href="<?= url('item-details.php?id=' . $it['id']) ?>" class="btn btn-outline btn-sm">
                                             View Full
                                         </a>
+                                        <?php if ($it['status'] === 'open'): ?>
+                                            <form method="POST" action="<?= url('api/admin/items.php') ?>" class="admin-item-moderation-form" style="margin-top: var(--space-2); text-align: left; min-width: 220px;">
+                                                <input type="hidden" name="csrf_token" value="<?= e(get_csrf_token()) ?>">
+                                                <input type="hidden" name="item_id" value="<?= e($it['id']) ?>">
+                                                <label class="sr-only" for="moderationStatus<?= e($it['id']) ?>">New status for <?= e($it['title']) ?></label>
+                                                <select id="moderationStatus<?= e($it['id']) ?>" name="status" class="form-select" required>
+                                                    <option value="closed">Close as resolved</option>
+                                                    <option value="rejected">Reject report</option>
+                                                </select>
+                                                <label class="sr-only" for="moderationReason<?= e($it['id']) ?>">Reason for moderating <?= e($it['title']) ?></label>
+                                                <input id="moderationReason<?= e($it['id']) ?>" type="text" name="reason" class="form-control" minlength="5" maxlength="500" placeholder="Reason (5–500 characters)" required style="margin-top: var(--space-2);">
+                                                <button type="submit" class="btn btn-danger btn-sm" style="margin-top: var(--space-2);">Moderate</button>
+                                            </form>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
