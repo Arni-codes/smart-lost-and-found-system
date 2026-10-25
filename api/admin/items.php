@@ -93,7 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $items = $stmt->fetchAll();
 
         foreach ($items as &$item) {
-            $item['image_url'] = !empty($item['image_path']) ? url($item['image_path']) : null;
+            $item['image_path'] = !empty($item['image_path']) ? basename($item['image_path']) : null;
+            $item['image_url']  = !empty($item['image_path']) ? url('uploads/items/' . $item['image_path']) : null;
         }
         unset($item);
 

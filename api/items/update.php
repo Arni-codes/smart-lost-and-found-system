@@ -109,7 +109,7 @@ try {
         }
         // Delete old image
         FileUploadService::deleteFile($item['image_path']);
-        $imagePath = $upload['path'];
+        $imagePath = $upload['filename'];
     }
 
     // Check if remove_image flag sent
